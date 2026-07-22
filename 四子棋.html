@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🔴⚫ 四子棋</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .container {
+    text-align: center;
+  }
+
+  .title {
+    color: #fff;
+    font-size: 32px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+  }
+
+  .status {
+    color: #ff6b6b;
+    font-size: 20px;
+    margin-bottom: 16px;
+    height: 30px;
+    letter-spacing: 2px;
+  }
+  .status.black-turn { color: #aaa; }
+
+  .board {
+    display: inline-block;
+    background: linear-gradient(180deg, #1a3a5c, #0d2137);
+    padding: 12px;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.05);
+    position: relative;
+  }
+
+  .row {
+    display: flex;
+  }
+
+  .cell {
+    width: 42px;
+    height: 42px;
+    margin: 4px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #1e4460, #0a1628);
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: background 0.12s ease;
+    position: relative;
+  }
+
+  .cell.red {
+    background: radial-gradient(circle at 35% 35%, #ff6b6b, #c0392b);
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(255,100,100,0.4);
+  }
+
+  .cell.black {
+    background: radial-gradient(circle at 35% 35%, #666, #1a1a1a);
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(255,255,255,0.1);
+  }
+
+  .cell.win {
+    animation: winGlow 0.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes winGlow {
+    0%   { box-shadow: 0 0 8px 3px rgba(255,215,0,0.6); }
+    100% { box-shadow: 0 0 20px 8px rgba(255,215,0,1); }
+  }
+
+  /* 悬浮提示列 */
+  .col-hint {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+  }
+  .col-hint .hint-dot {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.12s;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .col-hint:hover .hint-dot,
+  .col-hint.active .hint-dot {
+    opacity: 1;
+  }
+  .col-hint.red-turn .hint-dot {
+    background: radial-gradient(circle at 35% 35%, #ff6b6b, #c0392b);
+  }
+  .col-hint.black-turn .hint-dot {
+    background: radial-gradient(circle at 35% 35%, #666, #1a1a1a);
+  }
+
+  .btn {
+    margin-top: 20px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 12px 40px;
+    font-size: 18px;
+    border-radius: 30px;
+    cursor: pointer;
+    letter-spacing: 3px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .btn:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.4);
+  }
+  .btn:active {
+    transform: scale(0.95);
+  }
+
+  /* 胜利弹窗 */
+  .overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+
+  .win-dialog {
+    background: #1a2740;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 36px 40px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .win-dialog .win-icon { font-size: 64px; margin-bottom: 12px; }
+  .win-dialog .win-text { color: #fff; font-size: 26px; letter-spacing: 3px; margin-bottom: 20px; }
+  .win-dialog .btn { margin-top: 4px; }
+
+  @media (max-width: 400px) {
+    .cell { width: 38px; height: 38px; margin: 3px; }
+    .title { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="title">🔴⚫ 四 子 棋</div>
+  <div class="status" id="status">🔴 红方落子</div>
+  <div class="board" id="board"></div>
+  <button class="btn" onclick="restart()">🔄 重新开始</button>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="win-dialog">
+    <div class="win-icon" id="winIcon"></div>
+    <div class="win-text" id="winText"></div>
+    <button class="btn" onclick="restart()">🔄 再来一局</button>
+  </div>
+</div>
+
+<script>
+const ROWS = 6;
+const COLS = 7;
+let grid = [];
+let currentPlayer = 'red'; // red | black
+let gameOver = false;
+let winningCells = [];
+let activeCol = -1;
+
+function initGrid() {
+  grid = Array.from({length: ROWS}, () => Array(COLS).fill(null));
+  currentPlayer = 'red';
+  gameOver = false;
+  winningCells = [];
+  document.getElementById('overlay').classList.add('hidden');
+  updateStatus();
+  renderBoard();
+}
+
+function updateStatus() {
+  const s = document.getElementById('status');
+  if (gameOver) {
+    s.textContent = currentPlayer === 'red' ? '🔴 红方获胜！' : '⚫ 黑方获胜！';
+    s.className = 'status';
+  } else {
+    s.textContent = currentPlayer === 'red' ? '🔴 红方落子' : '⚫ 黑方落子';
+    s.className = 'status' + (currentPlayer === 'black' ? ' black-turn' : '');
+  }
+}
+
+function dropPiece(col) {
+  if (gameOver) return;
+
+  // 从底向上找第一个空位
+  for (let row = ROWS - 1; row >= 0; row--) {
+    if (!grid[row][col]) {
+      grid[row][col] = currentPlayer;
+
+      // 检查胜利
+      if (checkWin(row, col)) {
+        gameOver = true;
+        updateStatus();
+        renderBoard();
+        setTimeout(showWinDialog, 600);
+        return;
+      }
+
+      // 检查平局
+      if (checkDraw()) {
+        gameOver = true;
+        document.getElementById('status').textContent = '🤝 平局！';
+        renderBoard();
+        setTimeout(showDrawDialog, 400);
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'red' ? 'black' : 'red';
+      updateStatus();
+      renderBoard();
+      return;
+    }
+  }
+}
+
+function checkWin(row, col) {
+  const player = grid[row][col];
+  const directions = [
+    [0, 1],   // 水平
+    [1, 0],   // 垂直
+    [1, 1],   // 右下对角线
+    [1, -1],  // 左下对角线
+  ];
+
+  for (const [dr, dc] of directions) {
+    const cells = [[row, col]];
+    // 正向
+    for (let i = 1; i < 4; i++) {
+      const r = row + dr * i, c = col + dc * i;
+      if (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] === player) {
+        cells.push([r, c]);
+      } else break;
+    }
+    // 反向
+    for (let i = 1; i < 4; i++) {
+      const r = row - dr * i, c = col - dc * i;
+      if (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] === player) {
+        cells.unshift([r, c]);
+      } else break;
+    }
+    if (cells.length >= 4) {
+      winningCells = cells;
+      return true;
+    }
+  }
+  return false;
+}
+
+function checkDraw() {
+  return grid[0].every(c => c !== null);
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  for (let c = 0; c < COLS; c++) {
+    const colDiv = document.createElement('div');
+    colDiv.className = 'col-hint';
+    if (!gameOver) {
+      colDiv.classList.add(currentPlayer === 'red' ? 'red-turn' : 'black-turn');
+      if (c === activeCol) colDiv.classList.add('active');
+    }
+
+    // 列顶提示点
+    const hint = document.createElement('div');
+    hint.className = 'hint-dot';
+    colDiv.appendChild(hint);
+
+    // 该列所有格子
+    for (let r = 0; r < ROWS; r++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      if (grid[r][c] === 'red') cell.classList.add('red');
+      if (grid[r][c] === 'black') cell.classList.add('black');
+      if (winningCells.some(([wr, wc]) => wr === r && wc === c)) {
+        cell.classList.add('win');
+      }
+      cell.addEventListener('click', () => dropPiece(c));
+      // 触摸支持
+      cell.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        dropPiece(c);
+      });
+      colDiv.appendChild(cell);
+    }
+    board.appendChild(colDiv);
+  }
+}
+
+function showWinDialog() {
+  document.getElementById('winIcon').textContent = currentPlayer === 'red' ? '🔴' : '⚫';
+  document.getElementById('winText').textContent =
+    (currentPlayer === 'red' ? '红方' : '黑方') + '获胜！';
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function showDrawDialog() {
+  document.getElementById('winIcon').textContent = '🤝';
+  document.getElementById('winText').textContent = '平局！';
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function restart() {
+  initGrid();
+}
+
+// 桌面端列悬浮高亮
+document.addEventListener('DOMContentLoaded', () => {
+  initGrid();
+  document.getElementById('board').addEventListener('mouseover', (e) => {
+    const cell = e.target.closest('.cell');
+    if (cell) {
+      const colDiv = cell.parentElement;
+      const allCols = [...document.querySelectorAll('.col-hint')];
+      activeCol = allCols.indexOf(colDiv);
+      renderBoard();
+    }
+  });
+  document.getElementById('board').addEventListener('mouseleave', () => {
+    activeCol = -1;
+    renderBoard();
+  });
+});
+</script>
+</body>
+</html>
